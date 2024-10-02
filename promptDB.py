@@ -7,12 +7,12 @@ from time import time
 
 PROMPT_SQL_ZERO_SHOT = "Give me a Postgres select statement that answers the question. Only respond with Postgres SQL syntax."
 QUESTIONS = [
-        "What songs should I listen to based on my favorite genres?",
+        "What is tony_stark's favorite genre of music?",
         "What are the top-rated songs by john_doe?",
-        "Which users have rated more than 3 songs?",
+        "Which users have rated 2 or more songs?",
         "What is the average rating for songs in the Jazz genre?",
         "What are the most popular songs by total ratings?",
-        "Which users have the highest average rating?"
+        "Which artists have the highest average rating?"
     ]
 
 ########################    
@@ -27,7 +27,7 @@ def get_path(fname):
 def get_config_file(path):
     configPath = get_path(path)
     with open(configPath) as file:
-        config = json.loan(file)
+        config = json.load(file)
 
     return config 
 
@@ -39,10 +39,9 @@ def connect_to_db(url):
     return pg_conn, pg_cursor
 
 
-def create_openai_client(api_key, orgId):
+def create_openai_client(api_key):
     openai_client = OpenAI(
-        api_key=api_key,
-        organization=orgId
+        api_key=api_key
     )
 
     return openai_client
@@ -54,15 +53,23 @@ def run_sql_file(cursor, filepath):
         cursor.execute(sql)
 
 
-def run_sql_query(cursor, query):
-    cursor.execute(query)
-    result = cursor.fetchall()
-    return result
+def run_sql_query(conn, cursor, query):
+    # cursor.execute(query)
+    # result = cursor.fetchall()
+    # return result
+    try:
+        cursor.execute(query)
+        result = cursor.fetchall()
+        return result
+    except Exception as e:
+        print(f"SQL Error: {e}")
+        conn.rollback()  # Rollback transaction to clear error state
+        raise
 
 
 def get_chat_response(client, content):
     stream = client.chat.completions.create(
-        model="gpt-4-1106-preview",
+        model="gpt-4o-mini",
         messages=[{"role": "user", "content": content}],
         stream=True,
     )
@@ -99,8 +106,15 @@ def sanitize_sql(value):
     return value
 
 
-def implement_prompt_strategy(client, cursor):
-    strategies = {"zero_shot": PROMPT_SQL_ZERO_SHOT}
+def load_sql_schema(filepath):
+    with open(filepath, 'r') as file:
+        schema = file.read()
+    return schema
+
+
+def implement_prompt_strategy(client, conn, cursor):
+    schema_context = load_sql_schema("setup.sql")
+    strategies = {"zero_shot": schema_context + "\n\n" + PROMPT_SQL_ZERO_SHOT}  # provide create table context
 
     for strategy in strategies:
         responses = {"strategy": strategy, "prompt_prefix": strategies[strategy]}
@@ -115,13 +129,13 @@ def implement_prompt_strategy(client, cursor):
                 print("Generated SQL:", sqlSyntaxResponse)
 
                 # run generated query on database
-                queryRawResponse = str(run_sql_query(cursor, sqlSyntaxResponse))
+                queryRawResponse = str(run_sql_query(conn, cursor, sqlSyntaxResponse))
                 print("Query Result:", queryRawResponse)
 
                 # get friendly response for query result
                 friendlyResultsPrompt = f"I asked the question '{question}' and the result was '{queryRawResponse}'. Please provide a concise and friendly explanation."
                 friendlyResponse = get_chat_response(client, friendlyResultsPrompt)
-                print("Friendly Response:", friendlyResponse)
+                print(f"Friendly Response: {friendlyResponse}\n")
 
             except Exception as err:
                 error = str(err)
@@ -139,27 +153,3 @@ def implement_prompt_strategy(client, cursor):
         responses["questionResults"] = questionResults
         with open(get_path(f"response_{strategy}_{time()}.json"), "w") as outFile:
             json.dump(responses, outFile, indent=2)
-    
-
-
-#####################
-### main function ###
-#####################
-def main():
-    print(f"Starting promptDB script...")
-
-    config_file = get_config_file("config.json")
-    conn, cursor = connect_to_db(config_file["dbServiceUrl"])
-
-    sql_setup(conn, cursor)
-
-    client = create_openai_client(config_file["openaiKey"], config_file["orgId"])
-    implement_prompt_strategy(client, cursor)
-
-    cursor.close()
-    conn.close()
-    print("PromptDB script finished.")
-
-
-if __name__ == "__main__":
-    main()

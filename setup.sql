@@ -1,3 +1,10 @@
+-- DROP TABLES while debugging
+DROP TABLE IF EXISTS ListeningHistory cascade;
+DROP TABLE IF EXISTS Songs cascade;
+DROP TABLE IF EXISTS Artists cascade;
+DROP TABLE IF EXISTS Users cascade;
+DROP TABLE IF EXISTS Recommendations cascade;
+
 -- CREATE TABLES for song rec database system: Users, Songs, Artists, ListeningHistory, Recommendations
 
 create table Users (

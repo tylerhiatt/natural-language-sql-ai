@@ -10,7 +10,8 @@ values
     ('bruce_wayne', 'Classical'),
     ('clark_kent', 'Country'),
     ('tony_stark', 'Electronic'),
-    ('diana_prince', 'R&B');
+    ('diana_prince', 'R&B'),
+    ('donald_trump', 'Rap');
 
 
 insert into Artists (name, genre, debut_year)
