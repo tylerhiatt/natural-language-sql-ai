@@ -1,7 +1,9 @@
-# natural-language-sql-ai
+# Natural Language-to-SQL Project
 
 ### Overview
-This project integrates a PostgreSQL database with OpenAI's GPT to generate SQL queries from natural language prompts. It evaluates different GPT prompting strategies, such as zero-shot and few-shot learning, and logs results to JSON files.
+This project integrates a PostgreSQL database with OpenAI's GPT to generate SQL queries from natural language prompts. It evaluates different GPT prompting strategies, such as zero-shot and double-shot learning, and logs results to JSON files.
+
+The Song Recommendation database stores and manages data related to users, artists, songs, listening history, and song recommendations. It can be queried to analyze user interactions and trends with their listening habits and preferences.
 
 ### File Descriptions
 - **promptDB.py:** contains the core logic for connecting to the database, executing SQL queries, and integrating GPT to generate SQL based on user questions. It implements multiple prompting strategies like zero-shot and few-shot
