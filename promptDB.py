@@ -6,18 +6,24 @@ from time import time
 
 
 PROMPT_SQL_ZERO_SHOT = "Give me a Postgres select statement that answers the question. Only respond with Postgres SQL syntax."
+PROMPT_SQL_DOUBLE_SHOT = (
+                        "\nExample 1: Which user has rated the most songs?" + 
+                        "\nSELECT user_id, COUNT(song_id) AS song_count FROM listeninghistory GROUP BY user_id ORDER BY song_count DESC LIMIT 1;\n\n" +
+                        "Example 2: Which songs have been rated by more than one user?" + 
+                        "\nSELECT song_id, COUNT(user_id) AS user_count FROM listeninghistory GROUP BY song_id HAVING user_count > 1;\n\n"
+                        )
 QUESTIONS = [
-        "What is tony_stark's favorite genre of music?",
+        "What is tony_stark's favorite genre of music?",  # easier questions
         "What are the top-rated songs by john_doe?",
         "Which users have rated 2 or more songs?",
         "What is the average rating for songs in the Jazz genre?",
         "What are the most popular songs by total ratings?",
-        "Which artists have the highest average rating?"
+        "Which artists have the highest average rating?",
+        "Which users have rated songs by artists who debuted before 2000?",     # start harder questions
+        "For each genre, what is the average rating and the number of users who rated at least one song?",
+        "Which users have engaged with the most popular music?"
     ]
 
-########################    
-### helper functions ###
-########################
     
 fdir = os.path.dirname(__file__)
 def get_path(fname):
@@ -54,9 +60,6 @@ def run_sql_file(cursor, filepath):
 
 
 def run_sql_query(conn, cursor, query):
-    # cursor.execute(query)
-    # result = cursor.fetchall()
-    # return result
     try:
         cursor.execute(query)
         result = cursor.fetchall()
@@ -114,7 +117,10 @@ def load_sql_schema(filepath):
 
 def implement_prompt_strategy(client, conn, cursor):
     schema_context = load_sql_schema("setup.sql")
-    strategies = {"zero_shot": schema_context + "\n\n" + PROMPT_SQL_ZERO_SHOT}  # provide create table context
+    strategies = {  # try two dif strategies
+        "zero_shot": schema_context + "\n\n" + PROMPT_SQL_ZERO_SHOT,
+        "single_domain_double_shot": schema_context + "\n\n" + PROMPT_SQL_DOUBLE_SHOT
+        }  
 
     for strategy in strategies:
         responses = {"strategy": strategy, "prompt_prefix": strategies[strategy]}

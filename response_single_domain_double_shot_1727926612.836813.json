@@ -1,0 +1,69 @@
+{
+  "strategy": "single_domain_double_shot",
+  "prompt_prefix": "-- DROP TABLES while debugging\nDROP TABLE IF EXISTS ListeningHistory cascade;\nDROP TABLE IF EXISTS Songs cascade;\nDROP TABLE IF EXISTS Artists cascade;\nDROP TABLE IF EXISTS Users cascade;\nDROP TABLE IF EXISTS Recommendations cascade;\n\n-- CREATE TABLES for song rec database system: Users, Songs, Artists, ListeningHistory, Recommendations\n\ncreate table Users (\n    user_id serial primary key,\n    username varchar(100) not null,\n    favorite_genre varchar(50)\n);\n\ncreate table Artists (\n    artist_id serial primary key,\n    name varchar(100) not null,\n    genre varchar(50),\n    debut_year int\n);\n\ncreate table Songs (\n    song_id serial primary key,\n    title varchar(100) not null,\n    artist_id int not null,\n    genre varchar(50),\n    duration int,\n    release_year int,\n    foreign key (artist_id) \n        references Artists(artist_id)\n        on delete cascade\n);\n\ncreate table ListeningHistory (\n    history_id serial primary key,\n    user_id int references Users(user_id) on delete cascade,\n    song_id int references Songs(song_id) on delete cascade,\n    rating int check (rating between 1 and 5),\n    last_listened timestamp default CURRENT_TIMESTAMP  \n);\n\ncreate table Recommendations (\n    recommendation_id serial primary key,\n    user_id int references Users(user_id) on delete cascade,\n    recommended_song_id int references Songs(song_id) on delete cascade,\n    recommendation_date timestamp default CURRENT_TIMESTAMP\n);\n\n\n\nExample 1: Which user has rated the most songs?\nSELECT user_id, COUNT(song_id) AS song_count FROM listeninghistory GROUP BY user_id ORDER BY song_count DESC LIMIT 1;\n\nExample 2: Which songs have been rated by more than one user?\nSELECT song_id, COUNT(user_id) AS user_count FROM listeninghistory GROUP BY song_id HAVING user_count > 1;\n\n",
+  "questionResults": [
+    {
+      "question": "What is tony_stark's favorite genre of music?",
+      "sql": "\nSELECT favorite_genre \nFROM Users \nWHERE username = 'tony_stark';\n",
+      "queryRawResponse": "[('Electronic',)]",
+      "friendlyResponse": "It seems that Tony Stark's favorite genre of music is electronic! This genre typically features upbeat rhythms and innovative sounds, which fits well with his high-tech persona. If you have more questions about him or other topics, feel free to ask!",
+      "error": "None"
+    },
+    {
+      "question": "What are the top-rated songs by john_doe?",
+      "sql": "\nSELECT \n    s.song_id,\n    s.title,\n    lh.rating\nFROM \n    ListeningHistory lh\nJOIN \n    Users u ON lh.user_id = u.user_id\nJOIN \n    Songs s ON lh.song_id = s.song_id\nWHERE \n    u.username = 'john_doe'\nORDER BY \n    lh.rating DESC;\n",
+      "queryRawResponse": "[(1, 'Hey Jude', 5), (14, 'Here Comes the Sun', 5), (5, 'Yesterday', 4)]",
+      "friendlyResponse": "Sure! The top-rated songs by John Doe are:\n\n1. **Hey Jude** - Rated 5 stars\n2. **Here Comes the Sun** - Rated 5 stars\n3. **Yesterday** - Rated 4 stars\n\nThe numbers in parentheses represent the ranking and the star ratings given to each song. So, \"Hey Jude\" and \"Here Comes the Sun\" are his highest-rated songs, both receiving a perfect score of 5 stars!",
+      "error": "None"
+    },
+    {
+      "question": "Which users have rated 2 or more songs?",
+      "sql": "\nSELECT user_id, COUNT(song_id) AS song_count \nFROM ListeningHistory \nGROUP BY user_id \nHAVING song_count >= 2;\n",
+      "queryRawResponse": "[(1, 'Hey Jude', 5), (14, 'Here Comes the Sun', 5), (5, 'Yesterday', 4)]",
+      "friendlyResponse": "Sure! The top-rated songs by John Doe are:\n\n1. **Hey Jude** - Rated 5 stars\n2. **Here Comes the Sun** - Rated 5 stars\n3. **Yesterday** - Rated 4 stars\n\nThe numbers in parentheses represent the ranking and the star ratings given to each song. So, \"Hey Jude\" and \"Here Comes the Sun\" are his highest-rated songs, both receiving a perfect score of 5 stars!",
+      "error": "column \"song_count\" does not exist\nLINE 5: HAVING song_count >= 2;\n               ^\n"
+    },
+    {
+      "question": "What is the average rating for songs in the Jazz genre?",
+      "sql": "\nSELECT AVG(lh.rating) AS average_rating\nFROM ListeningHistory lh\nJOIN Songs s ON lh.song_id = s.song_id\nWHERE s.genre = 'Jazz';\n",
+      "queryRawResponse": "[(Decimal('5.0000000000000000'),)]",
+      "friendlyResponse": "The average rating for songs in the Jazz genre is 5.0. This means that, on average, Jazz songs are rated very highly! If you have any more questions about Jazz or music ratings, feel free to ask!",
+      "error": "None"
+    },
+    {
+      "question": "What are the most popular songs by total ratings?",
+      "sql": "\nSELECT \n    S.song_id, \n    S.title, \n    SUM(LH.rating) AS total_rating \nFROM \n    Songs S\nJOIN \n    ListeningHistory LH ON S.song_id = LH.song_id\nGROUP BY \n    S.song_id, S.title\nORDER BY \n    total_rating DESC;\n",
+      "queryRawResponse": "[(14, 'Here Comes the Sun', 10), (3, 'So What', 5), (11, 'Halo', 5), (10, 'One More Time', 5), (13, 'Enter Sandman', 5), (2, 'Shake It Off', 5), (7, 'Stronger', 5), (1, 'Hey Jude', 5), (4, 'Redemption Song', 5), (5, 'Yesterday', 4), (8, 'Fifth Symphony', 4), (12, 'Rolling in the Deep', 4), (6, 'All Too Well', 4), (9, 'Hurt', 4)]",
+      "friendlyResponse": "Here's a list of popular songs ranked by their total ratings! At the top, we have \"Here Comes the Sun\" with a perfect score of 10. Following that, several songs share a rating of 5, including \"So What,\" \"Halo,\" and \"Shake It Off,\" among others. A few songs, like \"Yesterday\" and \"Fifth Symphony,\" have ratings of 4. This ranking highlights the songs that have resonated most with listeners based on their ratings. Enjoy exploring these tunes!",
+      "error": "None"
+    },
+    {
+      "question": "Which artists have the highest average rating?",
+      "sql": "\nSELECT \n    a.artist_id, \n    a.name,\n    AVG(lh.rating) AS average_rating\nFROM \n    Artists a\nJOIN \n    Songs s ON a.artist_id = s.artist_id\nJOIN \n    ListeningHistory lh ON s.song_id = lh.song_id\nGROUP BY \n    a.artist_id, a.name\nORDER BY \n    average_rating DESC;\n",
+      "queryRawResponse": "[(11, 'Metallica', Decimal('5.0000000000000000')), (9, 'Beyonc\u00e9', Decimal('5.0000000000000000')), (3, 'Miles Davis', Decimal('5.0000000000000000')), (5, 'Kanye West', Decimal('5.0000000000000000')), (4, 'Bob Marley', Decimal('5.0000000000000000')), (8, 'Daft Punk', Decimal('5.0000000000000000')), (1, 'The Beatles', Decimal('4.7500000000000000')), (2, 'Taylor Swift', Decimal('4.5000000000000000')), (6, 'Ludwig van Beethoven', Decimal('4.0000000000000000')), (7, 'Johnny Cash', Decimal('4.0000000000000000')), (10, 'Adele', Decimal('4.0000000000000000'))]",
+      "friendlyResponse": "The artists with the highest average ratings are Metallica, Beyonc\u00e9, Miles Davis, Kanye West, Bob Marley, and Daft Punk, all of whom have received a perfect average score of 5.0. Following them, The Beatles average 4.75, Taylor Swift 4.5, and Ludwig van Beethoven, Johnny Cash, and Adele all average 4.0. This ranking shows how well these artists are rated overall!",
+      "error": "None"
+    },
+    {
+      "question": "Which users have rated songs by artists who debuted before 2000?",
+      "sql": "\nSELECT DISTINCT u.user_id, u.username\nFROM Users u\nJOIN ListeningHistory lh ON u.user_id = lh.user_id\nJOIN Songs s ON lh.song_id = s.song_id\nJOIN Artists a ON s.artist_id = a.artist_id\nWHERE a.debut_year < 2000;\n",
+      "queryRawResponse": "[(2, 'jane_smith'), (1, 'john_doe'), (4, 'bob_marley'), (6, 'bruce_wayne'), (8, 'tony_stark'), (7, 'clark_kent'), (3, 'alice_wonder'), (9, 'diana_prince'), (10, 'donald_trump')]",
+      "friendlyResponse": "The results show a list of users who have rated songs from artists that debuted before the year 2000. Each entry consists of a user ID and their username. For example, user ID 2 corresponds to the user 'jane_smith', indicating she has rated such songs. The list is ordered by user ID, and includes a variety of users, reflecting a mix of interests in music from earlier decades. If you have any further questions or need more details, feel free to ask!",
+      "error": "None"
+    },
+    {
+      "question": "For each genre, what is the average rating and the number of users who rated at least one song?",
+      "sql": "\nSELECT \n    s.genre,\n    AVG(lh.rating) AS average_rating,\n    COUNT(DISTINCT lh.user_id) AS user_count\nFROM \n    Songs s\nJOIN \n    ListeningHistory lh ON s.song_id = lh.song_id\nGROUP BY \n    s.genre;\n",
+      "queryRawResponse": "[('Classical', Decimal('4.0000000000000000'), 1), ('Country', Decimal('4.0000000000000000'), 1), ('Electronic', Decimal('5.0000000000000000'), 1), ('Hip-Hop', Decimal('5.0000000000000000'), 1), ('Jazz', Decimal('5.0000000000000000'), 1), ('Metal', Decimal('5.0000000000000000'), 1), ('Pop', Decimal('4.3333333333333333'), 2), ('R&B', Decimal('5.0000000000000000'), 1), ('Reggae', Decimal('5.0000000000000000'), 1), ('Rock', Decimal('4.7500000000000000'), 2)]",
+      "friendlyResponse": "Sure! The results you obtained show the average ratings for different music genres, along with the number of users who have rated at least one song in each genre. Here\u2019s a breakdown:\n\n- **Classical**: Average rating of 4.0 from 1 user\n- **Country**: Average rating of 4.0 from 1 user\n- **Electronic**: Average rating of 5.0 from 1 user\n- **Hip-Hop**: Average rating of 5.0 from 1 user\n- **Jazz**: Average rating of 5.0 from 1 user\n- **Metal**: Average rating of 5.0 from 1 user\n- **Pop**: Average rating of 4.33 from 2 users\n- **R&B**: Average rating of 5.0 from 1 user\n- **Reggae**: Average rating of 5.0 from 1 user\n- **Rock**: Average rating of 4.75 from 2 users\n\nIn summary, most genres received high ratings, and some genres, like Pop and Rock, had ratings from multiple users, which gives a broader perspective on those genres.",
+      "error": "None"
+    },
+    {
+      "question": "Which users have engaged with the most popular music?",
+      "sql": "\nWITH PopularSongs AS (\n    SELECT song_id\n    FROM ListeningHistory\n    GROUP BY song_id\n    HAVING COUNT(user_id) >= 2  -- Assuming a song must have at least 2 ratings to be considered popular\n),\nUserEngagement AS (\n    SELECT u.user_id, COUNT(lh.song_id) AS engagement_count\n    FROM Users u\n    JOIN ListeningHistory lh ON u.user_id = lh.user_id\n    WHERE lh.song_id IN (SELECT song_id FROM PopularSongs)\n    GROUP BY u.user_id\n)\nSELECT user_id, engagement_count\nFROM UserEngagement\nORDER BY engagement_count DESC;\n",
+      "queryRawResponse": "[(7, 1), (1, 1)]",
+      "friendlyResponse": "The result you received indicates that there are two users who have engaged with the most popular music. Specifically, user 7 and user 1 have each engaged with one track of the popular music identified in your query. This means that both users have a connection to the top music selections you were looking at!",
+      "error": "None"
+    }
+  ]
+}
